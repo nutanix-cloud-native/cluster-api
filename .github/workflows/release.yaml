@@ -22,14 +22,7 @@ jobs:
           fetch-depth: 0
       - name: Get changed files
         id: changed-files
-        run: |
-          changed_files=$(git diff --name-only HEAD^ HEAD)
-          changed_files_count=$(echo "$changed_files" | wc -l)
-          if [[ -z "$changed_files" ]]; then
-            changed_files_count=0
-          fi
-          echo "all_changed_files=$changed_files" >> $GITHUB_OUTPUT
-          echo "all_changed_files_count=$changed_files_count" >> $GITHUB_OUTPUT
+        uses: tj-actions/changed-files@24d32ffd492484c1d75e0c0b894501ddb9d30d62 # tag=v47.0.0
       - name: Get release version
         id: release-version
         run: |
