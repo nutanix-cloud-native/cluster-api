@@ -44,6 +44,13 @@ func ControlPlane() *ControlPlaneContract {
 	return controlPlane
 }
 
+// ControlPlaneEndpoint provides access to ControlPlaneEndpoint in an ControlPlane object.
+func (c *ControlPlaneContract) ControlPlaneEndpoint() *ControlPlaneEndpoint {
+	return &ControlPlaneEndpoint{
+		path: []string{"spec", "controlPlaneEndpoint"},
+	}
+}
+
 // MachineTemplate provides access to MachineTemplate in a ControlPlane object, if any.
 // NOTE: When working with unstructured there is no way to understand if the ControlPlane provider
 // do support a field in the type definition from the fact that a field is not set in a given instance.
