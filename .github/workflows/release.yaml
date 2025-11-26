@@ -114,9 +114,19 @@ jobs:
         uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # tag=v6.0.0
         with:
           go-version: ${{ env.go_version }}
-      - name: generate release artifacts
+      - name: Run release
         run: |
-          make release
+          echo "Version is: $VERSION"
+          echo "Previous version is: $PREVIOUS_VERSION"
+          echo "Release branch is: $RELEASE_BRANCH"
+          echo "Release tag is: $RELEASE_TAG"
+          PROD_REGISTRY="ghcr.io/nutanix-cloud-native" make release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REGISTRY: "ghcr.io/nutanix-cloud-native"
+          PROD_REGISTRY: "ghcr.io/nutanix-cloud-native"
+          GH_ORG_NAME: nutanix-cloud-native
+          TAG: ${{ env.RELEASE_TAG }}
       - name: get release notes
         run: |
           curl -L "https://raw.githubusercontent.com/${{ github.repository }}/main/CHANGELOG/${{ env.RELEASE_TAG }}.md" \
