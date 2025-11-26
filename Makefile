@@ -1062,6 +1062,8 @@ release: clean-release ## Build and push container images using the latest git t
 	GIT_VERSION=$(RELEASE_TAG) $(MAKE) release-binaries
 	# Set the manifest images to the staging/production bucket and Builds the manifests to publish with a release.
 	$(MAKE) release-manifests-all
+	$(MAKE) docker-build-all
+	$(MAKE) docker-push-all
 
 .PHONY: release-manifests-all
 release-manifests-all: # Set the manifest images to the staging/production bucket and Builds the manifests to publish with a release.
