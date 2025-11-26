@@ -1072,7 +1072,7 @@ release-manifests-all: # Set the manifest images to the staging/production bucke
 	## Build the manifests
 	$(MAKE) release-manifests
 	# Set the development manifest image to the staging bucket.
-	$(MAKE) manifest-modification-dev REGISTRY=$(STAGING_REGISTRY)
+	$(MAKE) manifest-modification-dev REGISTRY=$(PROD_REGISTRY)
 	## Build the development manifests
 	$(MAKE) release-manifests-dev
 	## Clean the git artifacts modified in the release process
