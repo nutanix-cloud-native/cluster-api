@@ -9,6 +9,7 @@ on:
 
 permissions:
   contents: write # Allow to push a tag, create a release branch and publish a draft release.
+  packages: write
 
 jobs:
   push_release_tags:
