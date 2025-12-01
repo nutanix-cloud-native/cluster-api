@@ -242,7 +242,7 @@ CAPI_KIND_CLUSTER_NAME ?= capi-test
 
 TAG ?= dev
 ARCH ?= $(shell go env GOARCH)
-ALL_ARCH ?= amd64 arm arm64 ppc64le s390x
+ALL_ARCH ?= amd64 arm arm64
 
 # Allow overriding the imagePullPolicy
 PULL_POLICY ?= Always
