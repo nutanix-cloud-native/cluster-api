@@ -1018,6 +1018,8 @@ release: clean-release ## Build and push container images using the latest git t
 	git checkout "${RELEASE_TAG}"
 	# Build binaries first.
 	GIT_VERSION=$(RELEASE_TAG) $(MAKE) release-binaries
+	$(MAKE) docker-build-all
+	$(MAKE) docker-push-all
 	# Set the manifest images to the staging/production bucket and Builds the manifests to publish with a release.
 	$(MAKE) release-manifests-all
 
@@ -1028,9 +1030,9 @@ release-manifests-all: # Set the manifest images to the staging/production bucke
 	## Build the manifests
 	$(MAKE) release-manifests
 	# Set the development manifest image to the staging bucket.
-	$(MAKE) manifest-modification-dev REGISTRY=$(STAGING_REGISTRY)
+	$(MAKE) manifest-modification-dev REGISTRY=$(PROD_REGISTRY)
 	## Build the development manifests
-	$(MAKE) release-manifests-dev
+	$(MAKE) release-manifests-dev REGISTRY=$(PROD_REGISTRY)
 	## Clean the git artifacts modified in the release process
 	$(MAKE) clean-release-git
 
