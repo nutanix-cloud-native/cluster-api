@@ -179,3 +179,67 @@ func (d *FailureDomains) Set(obj *unstructured.Unstructured, values clusterv1.Fa
 	}
 	return nil
 }
+
+// ControlPlaneEndpoint provides a helper struct for working with ControlPlaneEndpoint
+// in an InfrastructureCluster object.
+type ControlPlaneEndpoint struct {
+	path Path
+}
+
+// Path returns the path to the ControlPlaneEndpoint in an InfrastructureCluster object.
+func (c *ControlPlaneEndpoint) Path() Path {
+	return c.path
+}
+
+// Get gets the ControlPlaneEndpoint value.
+func (c *ControlPlaneEndpoint) Get(obj *unstructured.Unstructured) (*clusterv1.APIEndpoint, error) {
+	controlPlaneEndpointMap, ok, err := unstructured.NestedMap(obj.UnstructuredContent(), c.path...)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get %s from object", "."+strings.Join(c.path, "."))
+	}
+	if !ok {
+		return nil, errors.Wrapf(ErrFieldNotFound, "path %s", "."+strings.Join(c.path, "."))
+	}
+
+	endpoint := &clusterv1.APIEndpoint{}
+	s, err := json.Marshal(controlPlaneEndpointMap)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to marshal field at %s to json", "."+strings.Join(c.path, "."))
+	}
+	if err := json.Unmarshal(s, &endpoint); err != nil {
+		return nil, errors.Wrapf(err, "failed to unmarshal field at %s to json", "."+strings.Join(c.path, "."))
+	}
+
+	return endpoint, nil
+}
+
+// Set sets the ControlPlaneEndpoint value.
+func (c *ControlPlaneEndpoint) Set(obj *unstructured.Unstructured, value clusterv1.APIEndpoint) error {
+	controlPlaneEndpointMap := make(map[string]interface{})
+	s, err := json.Marshal(value)
+	if err != nil {
+		return errors.Wrapf(err, "failed to marshal supplied values to json for path %s", "."+strings.Join(c.path, "."))
+	}
+	if err := json.Unmarshal(s, &controlPlaneEndpointMap); err != nil {
+		return errors.Wrapf(err, "failed to unmarshal supplied values to json for path %s", "."+strings.Join(c.path, "."))
+	}
+
+	if err := unstructured.SetNestedField(obj.UnstructuredContent(), controlPlaneEndpointMap, c.path...); err != nil {
+		return errors.Wrapf(err, "failed to set path %s of object %v", "."+strings.Join(c.path, "."), obj.GroupVersionKind())
+	}
+	return nil
+}
+
+// host provides access to the host field in the ControlPlaneEndpoint in an InfrastructureCluster object.
+func (c *ControlPlaneEndpoint) host() *String {
+	return &String{
+		path: c.path.Append("host"),
+	}
+}
+
+// port provides access to the port field in the ControlPlaneEndpoint in an InfrastructureCluster object.
+func (c *ControlPlaneEndpoint) port() *Int64 {
+	return &Int64{
+		path: c.path.Append("port"),
+	}
+}
