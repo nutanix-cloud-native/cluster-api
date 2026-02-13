@@ -247,7 +247,7 @@ CAPI_KIND_CLUSTER_NAME ?= capi-test
 
 TAG ?= dev
 ARCH ?= $(shell go env GOARCH)
-ALL_ARCH ?= amd64 arm arm64 ppc64le s390x
+ALL_ARCH ?= amd64 arm arm64
 
 # Allow overriding the imagePullPolicy
 PULL_POLICY ?= Always
@@ -1022,6 +1022,8 @@ release: clean-release ## Build and push container images using the latest git t
 	git checkout "${RELEASE_TAG}"
 	# Build binaries first.
 	GIT_VERSION=$(RELEASE_TAG) $(MAKE) release-binaries
+	$(MAKE) docker-build-all
+	$(MAKE) docker-push-all
 	# Set the manifest images to the staging/production bucket and Builds the manifests to publish with a release.
 	$(MAKE) release-manifests-all
 
@@ -1032,9 +1034,9 @@ release-manifests-all: # Set the manifest images to the staging/production bucke
 	## Build the manifests
 	$(MAKE) release-manifests
 	# Set the development manifest image to the staging bucket.
-	$(MAKE) manifest-modification-dev REGISTRY=$(STAGING_REGISTRY)
+	$(MAKE) manifest-modification-dev REGISTRY=$(PROD_REGISTRY)
 	## Build the development manifests
-	$(MAKE) release-manifests-dev
+	$(MAKE) release-manifests-dev REGISTRY=$(PROD_REGISTRY)
 	## Clean the git artifacts modified in the release process
 	$(MAKE) clean-release-git
 
@@ -1208,7 +1210,7 @@ docker-push-core: ## Push the core docker image
 
 .PHONY: docker-push-manifest-core
 docker-push-manifest-core: ## Push the multiarch manifest for the core docker images
-	docker manifest create --amend $(CONTROLLER_IMG):$(TAG) $(shell echo $(ALL_ARCH) | sed -e "s~[^ ]*~$(CONTROLLER_IMG)\-&:$(TAG)~g")
+	docker manifest create $(CONTROLLER_IMG):$(TAG) $(shell echo $(ALL_ARCH) | sed -e "s~[^ ]*~$(CONTROLLER_IMG)\-&:$(TAG)~g")
 	@for arch in $(ALL_ARCH); do docker manifest annotate --arch $${arch} ${CONTROLLER_IMG}:${TAG} ${CONTROLLER_IMG}-$${arch}:${TAG}; done
 	docker manifest push --purge $(CONTROLLER_IMG):$(TAG)
 	$(MAKE) set-manifest-image MANIFEST_IMG=$(CONTROLLER_IMG) MANIFEST_TAG=$(TAG) TARGET_RESOURCE="./config/default/manager_image_patch.yaml"
@@ -1220,7 +1222,7 @@ docker-push-kubeadm-bootstrap: ## Push the kubeadm bootstrap docker image
 
 .PHONY: docker-push-manifest-kubeadm-bootstrap
 docker-push-manifest-kubeadm-bootstrap: ## Push the multiarch manifest for the kubeadm bootstrap docker images
-	docker manifest create --amend $(KUBEADM_BOOTSTRAP_CONTROLLER_IMG):$(TAG) $(shell echo $(ALL_ARCH) | sed -e "s~[^ ]*~$(KUBEADM_BOOTSTRAP_CONTROLLER_IMG)\-&:$(TAG)~g")
+	docker manifest create $(KUBEADM_BOOTSTRAP_CONTROLLER_IMG):$(TAG) $(shell echo $(ALL_ARCH) | sed -e "s~[^ ]*~$(KUBEADM_BOOTSTRAP_CONTROLLER_IMG)\-&:$(TAG)~g")
 	@for arch in $(ALL_ARCH); do docker manifest annotate --arch $${arch} ${KUBEADM_BOOTSTRAP_CONTROLLER_IMG}:${TAG} ${KUBEADM_BOOTSTRAP_CONTROLLER_IMG}-$${arch}:${TAG}; done
 	docker manifest push --purge $(KUBEADM_BOOTSTRAP_CONTROLLER_IMG):$(TAG)
 	$(MAKE) set-manifest-image MANIFEST_IMG=$(KUBEADM_BOOTSTRAP_CONTROLLER_IMG) MANIFEST_TAG=$(TAG) TARGET_RESOURCE="./bootstrap/kubeadm/config/default/manager_image_patch.yaml"
@@ -1232,7 +1234,7 @@ docker-push-kubeadm-control-plane: ## Push the kubeadm control plane docker imag
 
 .PHONY: docker-push-manifest-kubeadm-control-plane
 docker-push-manifest-kubeadm-control-plane: ## Push the multiarch manifest for the kubeadm control plane docker images
-	docker manifest create --amend $(KUBEADM_CONTROL_PLANE_CONTROLLER_IMG):$(TAG) $(shell echo $(ALL_ARCH) | sed -e "s~[^ ]*~$(KUBEADM_CONTROL_PLANE_CONTROLLER_IMG)\-&:$(TAG)~g")
+	docker manifest create $(KUBEADM_CONTROL_PLANE_CONTROLLER_IMG):$(TAG) $(shell echo $(ALL_ARCH) | sed -e "s~[^ ]*~$(KUBEADM_CONTROL_PLANE_CONTROLLER_IMG)\-&:$(TAG)~g")
 	@for arch in $(ALL_ARCH); do docker manifest annotate --arch $${arch} ${KUBEADM_CONTROL_PLANE_CONTROLLER_IMG}:${TAG} ${KUBEADM_CONTROL_PLANE_CONTROLLER_IMG}-$${arch}:${TAG}; done
 	docker manifest push --purge $(KUBEADM_CONTROL_PLANE_CONTROLLER_IMG):$(TAG)
 	$(MAKE) set-manifest-image MANIFEST_IMG=$(KUBEADM_CONTROL_PLANE_CONTROLLER_IMG) MANIFEST_TAG=$(TAG) TARGET_RESOURCE="./controlplane/kubeadm/config/default/manager_image_patch.yaml"
@@ -1244,7 +1246,7 @@ docker-push-docker-infrastructure: ## Push the docker infrastructure provider im
 
 .PHONY: docker-push-manifest-docker-infrastructure
 docker-push-manifest-docker-infrastructure: ## Push the multiarch manifest for the docker infrastructure provider images
-	docker manifest create --amend $(CAPD_CONTROLLER_IMG):$(TAG) $(shell echo $(ALL_ARCH) | sed -e "s~[^ ]*~$(CAPD_CONTROLLER_IMG)\-&:$(TAG)~g")
+	docker manifest create $(CAPD_CONTROLLER_IMG):$(TAG) $(shell echo $(ALL_ARCH) | sed -e "s~[^ ]*~$(CAPD_CONTROLLER_IMG)\-&:$(TAG)~g")
 	@for arch in $(ALL_ARCH); do docker manifest annotate --arch $${arch} ${CAPD_CONTROLLER_IMG}:${TAG} ${CAPD_CONTROLLER_IMG}-$${arch}:${TAG}; done
 	docker manifest push --purge $(CAPD_CONTROLLER_IMG):$(TAG)
 	$(MAKE) set-manifest-image MANIFEST_IMG=$(CAPD_CONTROLLER_IMG) MANIFEST_TAG=$(TAG) TARGET_RESOURCE="$(CAPD_DIR)/config/default/manager_image_patch.yaml"
@@ -1256,7 +1258,7 @@ docker-push-test-extension: ## Push the test extension provider image
 
 .PHONY: docker-push-manifest-test-extension
 docker-push-manifest-test-extension: ## Push the multiarch manifest for the test extension provider images
-	docker manifest create --amend $(TEST_EXTENSION_IMG):$(TAG) $(shell echo $(ALL_ARCH) | sed -e "s~[^ ]*~$(TEST_EXTENSION_IMG)\-&:$(TAG)~g")
+	docker manifest create $(TEST_EXTENSION_IMG):$(TAG) $(shell echo $(ALL_ARCH) | sed -e "s~[^ ]*~$(TEST_EXTENSION_IMG)\-&:$(TAG)~g")
 	@for arch in $(ALL_ARCH); do docker manifest annotate --arch $${arch} ${TEST_EXTENSION_IMG}:${TAG} ${TEST_EXTENSION_IMG}-$${arch}:${TAG}; done
 	docker manifest push --purge $(TEST_EXTENSION_IMG):$(TAG)
 	$(MAKE) set-manifest-image MANIFEST_IMG=$(TEST_EXTENSION_IMG) MANIFEST_TAG=$(TAG) TARGET_RESOURCE="./test/extension/config/default/manager_image_patch.yaml"
@@ -1268,7 +1270,7 @@ docker-push-clusterctl: ## Push the clusterctl image
 
 .PHONY: docker-push-manifest-clusterctl
 docker-push-manifest-clusterctl: ## Push the multiarch manifest for the clusterctl images
-	docker manifest create --amend $(CLUSTERCTL_IMG):$(TAG) $(shell echo $(ALL_ARCH) | sed -e "s~[^ ]*~$(CLUSTERCTL_IMG)\-&:$(TAG)~g")
+	docker manifest create $(CLUSTERCTL_IMG):$(TAG) $(shell echo $(ALL_ARCH) | sed -e "s~[^ ]*~$(CLUSTERCTL_IMG)\-&:$(TAG)~g")
 	@for arch in $(ALL_ARCH); do docker manifest annotate --arch $${arch} ${CLUSTERCTL_IMG}:${TAG} ${CLUSTERCTL_IMG}-$${arch}:${TAG}; done
 	docker manifest push --purge $(CLUSTERCTL_IMG):$(TAG)
 
