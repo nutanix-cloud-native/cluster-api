@@ -506,8 +506,12 @@ func (r *KubeadmControlPlaneReconciler) reconcile(ctx context.Context, controlPl
 		return ctrl.Result{Requeue: true}, nil
 	}
 
+	parsedVersionForPermissions, err := semver.ParseTolerant(controlPlane.KCP.Spec.Version)
+	if err != nil {
+		return ctrl.Result{}, errors.Wrapf(err, "failed to parse kubernetes version %q", controlPlane.KCP.Spec.Version)
+	}
 	// Ensure kubeadm role bindings for v1.18+
-	if err := workloadCluster.AllowBootstrapTokensToGetNodes(ctx); err != nil {
+	if err := workloadCluster.EnsureKubeadmPermissions(ctx, parsedVersionForPermissions); err != nil {
 		return ctrl.Result{}, errors.Wrap(err, "failed to set role and role binding for kubeadm")
 	}
 
