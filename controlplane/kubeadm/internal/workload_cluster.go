@@ -114,7 +114,7 @@ type WorkloadCluster interface {
 	RemoveEtcdMemberForMachine(ctx context.Context, machine *clusterv1.Machine) error
 	ForwardEtcdLeadership(ctx context.Context, machine *clusterv1.Machine, leaderCandidate *clusterv1.Machine) error
 	AllowBootstrapTokensToGetNodes(ctx context.Context) error
-	AllowClusterAdminPermissions(ctx context.Context, version semver.Version) error
+	EnsureKubeadmPermissions(ctx context.Context, version semver.Version) error
 	UpdateClusterConfiguration(ctx context.Context, version semver.Version, mutators ...func(*bootstrapv1.ClusterConfiguration)) error
 
 	// State recovery tasks.

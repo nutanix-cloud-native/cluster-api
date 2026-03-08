@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/blang/semver/v4"
+	"github.com/google/go-cmp/cmp"
 	. "github.com/onsi/gomega"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -224,6 +225,148 @@ func TestCluster_AllowBootstrapTokensToGetNodes_Error(t *testing.T) {
 				Client: tt.client,
 			}
 			g.Expect(c.AllowBootstrapTokensToGetNodes(ctx)).NotTo(Succeed())
+		})
+	}
+}
+func TestEnsureKubeadmPermissions(t *testing.T) {
+	tests := []struct {
+		name          string
+		objs          []ctrlclient.Object
+		targetVersion semver.Version
+		wantObjs      []ctrlclient.Object
+	}{
+		{
+			name:          "Add kubeadm:cluster-admins and kubeadm:apiserver-kubelet-client ClusterRoleBinding for K8s <= 1.37",
+			objs:          nil,
+			targetVersion: semver.MustParse("1.37.5"),
+			wantObjs: []ctrlclient.Object{
+				&rbacv1.ClusterRoleBinding{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: ClusterAdminsGroupAndClusterRoleBinding,
+					},
+					RoleRef: rbacv1.RoleRef{
+						APIGroup: rbacv1.GroupName,
+						Kind:     "ClusterRole",
+						Name:     "cluster-admin",
+					},
+					Subjects: []rbacv1.Subject{
+						{
+							Kind: rbacv1.GroupKind,
+							Name: ClusterAdminsGroupAndClusterRoleBinding,
+						},
+					},
+				},
+				&rbacv1.ClusterRoleBinding{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: KubeletAPIAdminClusterRoleBindingName,
+					},
+					RoleRef: rbacv1.RoleRef{
+						APIGroup: rbacv1.GroupName,
+						Kind:     "ClusterRole",
+						Name:     KubeletAPIAdminClusterRoleName,
+					},
+					Subjects: []rbacv1.Subject{
+						{
+							Kind: rbacv1.UserKind,
+							Name: APIServerKubeletClientCertCommonName,
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "Ignore kubeadm:cluster-admins and kubeadm:apiserver-kubelet-client ClusterRoleBinding it they already exist for K8s <= 1.37 (kubeadm started adding those roles in patch versions)",
+			objs: []ctrlclient.Object{
+				&rbacv1.ClusterRoleBinding{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: ClusterAdminsGroupAndClusterRoleBinding,
+					},
+					// Intentionally using a different ClusterRoleBinding to check that it is not changed.
+				},
+				&rbacv1.ClusterRoleBinding{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: KubeletAPIAdminClusterRoleBindingName,
+					},
+					// Intentionally using a different ClusterRoleBinding to check that it is not changed.
+				},
+			},
+			targetVersion: semver.MustParse("1.37.0"),
+			wantObjs: []ctrlclient.Object{
+				&rbacv1.ClusterRoleBinding{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: ClusterAdminsGroupAndClusterRoleBinding,
+					},
+				},
+				&rbacv1.ClusterRoleBinding{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: KubeletAPIAdminClusterRoleBindingName,
+					},
+				},
+			},
+		},
+		{
+			name: "Ignore kubeadm:cluster-admins and kubeadm:apiserver-kubelet-client ClusterRoleBinding it they already exist for K8s >= 1.38 (kubeadm should add those roles or KCP in a previous update)",
+			objs: []ctrlclient.Object{
+				&rbacv1.ClusterRoleBinding{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: ClusterAdminsGroupAndClusterRoleBinding,
+					},
+					// Intentionally using a different ClusterRoleBinding to check that it is not changed.
+				},
+				&rbacv1.ClusterRoleBinding{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: KubeletAPIAdminClusterRoleBindingName,
+					},
+					// Intentionally using a different ClusterRoleBinding to check that it is not changed.
+				},
+			},
+			targetVersion: semver.MustParse("1.38.0"),
+			wantObjs: []ctrlclient.Object{
+				&rbacv1.ClusterRoleBinding{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: ClusterAdminsGroupAndClusterRoleBinding,
+					},
+				},
+				&rbacv1.ClusterRoleBinding{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: KubeletAPIAdminClusterRoleBindingName,
+					},
+				},
+			},
+		},
+		{
+			name:          "Do not add kubeadm:cluster-admins and kubeadm:apiserver-kubelet-client ClusterRoleBinding for K8s >= 1.38 (this should never happen, kubeadm should add those roles or KCP in a previous update)",
+			objs:          nil,
+			targetVersion: semver.MustParse("1.38.0"),
+			wantObjs:      nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := NewWithT(t)
+			fakeClient := fake.NewClientBuilder().WithObjects(tt.objs...).Build()
+
+			w := &Workload{
+				Client: fakeClient,
+			}
+			err := w.EnsureKubeadmPermissions(ctx, tt.targetVersion)
+			g.Expect(err).ToNot(HaveOccurred())
+
+			crbList := &rbacv1.ClusterRoleBindingList{}
+			err = fakeClient.List(ctx, crbList)
+			g.Expect(err).ToNot(HaveOccurred())
+
+			g.Expect(crbList.Items).To(HaveLen(len(tt.wantObjs)))
+
+			for _, o := range tt.wantObjs {
+				obj := o.DeepCopyObject().(ctrlclient.Object)
+				err := fakeClient.Get(ctx, ctrlclient.ObjectKeyFromObject(obj), obj)
+				g.Expect(err).ToNot(HaveOccurred())
+
+				o.SetResourceVersion(obj.GetResourceVersion())
+				g.Expect(obj).To(Equal(o), cmp.Diff(obj, o))
+			}
 		})
 	}
 }
