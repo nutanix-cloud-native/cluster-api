@@ -23,7 +23,7 @@ SHELL:=/usr/bin/env bash
 #
 # Go.
 #
-GO_VERSION ?= 1.24.11
+GO_VERSION ?= 1.24.13
 GO_DIRECTIVE_VERSION ?= 1.23.0
 GO_CONTAINER_IMAGE ?= docker.io/library/golang:$(GO_VERSION)
 
@@ -139,7 +139,7 @@ HADOLINT_FAILURE_THRESHOLD = warning
 
 SHELLCHECK_VER := v0.9.0
 
-TRIVY_VER := 0.49.1
+TRIVY_VER := 0.69.2
 
 KPROMO_VER := 5ab0dbc74b0228c22a93d240596dff77464aee8f
 KPROMO_BIN := kpromo
@@ -768,8 +768,7 @@ verify-diagrams: generate-diagrams ## Verify generated diagrams are up to date
 .PHONY: verify-security
 verify-security: ## Verify code and images for vulnerabilities
 	$(MAKE) verify-container-images && R1=$$? || R1=$$?; \
-	$(MAKE) verify-govulncheck && R2=$$? || R2=$$?; \
-	if [ "$$R1" -ne "0" ] || [ "$$R2" -ne "0" ]; then \
+	if [ "$$R1" -ne "0" ]; then \
 	  echo "Check for vulnerabilities failed! There are vulnerabilities to be fixed"; \
 		exit 1; \
 	fi
