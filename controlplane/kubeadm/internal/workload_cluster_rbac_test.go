@@ -150,18 +150,18 @@ func TestEnsureKubeadmPermissions(t *testing.T) {
 			w := &Workload{
 				Client: fakeClient,
 			}
-			err := w.EnsureKubeadmPermissions(t.Context(), tt.targetVersion)
+			err := w.EnsureKubeadmPermissions(ctx, tt.targetVersion)
 			g.Expect(err).ToNot(HaveOccurred())
 
 			crbList := &rbacv1.ClusterRoleBindingList{}
-			err = fakeClient.List(t.Context(), crbList)
+			err = fakeClient.List(ctx, crbList)
 			g.Expect(err).ToNot(HaveOccurred())
 
 			g.Expect(crbList.Items).To(HaveLen(len(tt.wantObjs)))
 
 			for _, o := range tt.wantObjs {
 				obj := o.DeepCopyObject().(client.Object)
-				err := fakeClient.Get(t.Context(), client.ObjectKeyFromObject(obj), obj)
+				err := fakeClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)
 				g.Expect(err).ToNot(HaveOccurred())
 
 				o.SetResourceVersion(obj.GetResourceVersion())
